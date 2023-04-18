@@ -1,0 +1,52 @@
+SELECT
+	CONCAT(p.first_name,' ',p.last_name) AS "Agent Name"
+	, d.agent_id AS "Agent ID"
+	, al.primary_email as "Agent E-Mail"
+	, b.brokerage_name as "Brokerage"
+	, cu.first_name || ' ' || cu.last_name AS "Customer Name"
+	, d.property_address_street AS "Property Address"
+	, d.deal_id as "Deal ID"
+	, TO_CHAR(d.close_date, 'MM/DD/YYYY') as "Close Date"
+	, to_char(d.close_price, 'L999G999G999D99') as "Final Price"
+	, to_char(d.redfin_revenue, 'L999G999G999D99') as "Referral Fee Due"
+	, to_char(COALESCE(d.commission_check_amount_received,0.00), 'L999G999G990D00') as "Amount Received"
+	, bm.name as "Market"
+
+	, (CASE WHEN d.commission_check_status_id = 2 THEN 'Check Expected'
+		WHEN d.commission_check_status_id = 3 THEN 'Check Received'
+		WHEN d.commission_check_status_id = 4 THEN 'Check Deposited'
+		WHEN d.commission_check_status_id = 5 THEN 'Check Not Expected'
+		WHEN d.commission_check_status_id = 6 THEN 'Sent to Collections'
+		WHEN d.commission_check_status_id = 7 THEN 'Check Postponed'
+		WHEN d.commission_check_status_id = 8 THEN 'Online Payment Confirmed'
+	END) AS "Check Status"
+
+	, CASE
+		when d.deal_status_id = 1 then 'Closed - Offer'
+		when d.deal_status_id = 13 then 'Listing - Active'
+		when d.deal_status_id = 8 then 'Closed - Listing'
+		when d.deal_status_id = 13 then 'Offer - Pending'
+		when d.deal_status_id = 26 then 'Offer - Short Sale'
+		when d.deal_status_id = 27 then 'Offer - Mutual Acceptance'
+		when d.deal_status_id = 29 then 'Offer - Awaiting Rescission'
+		when d.deal_status_id = 53 then 'Listing - Mutual Acceptance'
+		when d.deal_status_id IN (2, 3, 4, 5, 6, 14, 15) then 'Offer - Rejected'
+		when d.deal_status_id = 31 then 'Offer - Invalid'
+		when d.deal_status_id IN (9,66) then 'Listing - Expired'
+		when d.deal_status_id IN (68, 69) then 'Listing - Pulled'
+	END AS "Deal Page Status"
+
+FROM deals AS d 
+	JOIN agents AS a ON a.agent_id = d.agent_id
+	JOIN persons AS p ON a.person_id = p.participant_id
+	JOIN brokerages AS b ON a.brokerage_id = b.brokerage_id
+	JOIN logins AS l ON d.login_id = l.login_id
+	JOIN persons AS cu ON l.person_id = cu.participant_id
+	JOIN logins as al on al.person_id = a.person_id
+	JOIN business_markets AS bm ON bm.business_market_id = a.business_market_id
+	
+WHERE d.deal_classification_id = 2
+	AND d.is_redfin_deal = 't'
+	and d.deal_status_id in (1,8)
+	AND d.close_date <= '01-31-2023'
+	AND d.close_date >= '01-01-2023'

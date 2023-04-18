@@ -1,0 +1,33 @@
+SELECT 
+  b.brokerage_name as "Brokerage"
+  , to_char(d.commission_check_amount_received-d.redfin_gross_revenue, 'L999G999D99') as "Refund Due"
+  , CONCAT('Refund of Overpayment ',d.property_address_street,' - ',d.deal_id) as "Refund Check Memo"
+  , d.partner_commission_refund_address as "Refund Address"
+  , 'Partner Accounting' as "Authorized by"
+  , bm.name as "Business Market"
+  , d.refund_and_commission_comments as "Commission Comments"
+  , d.property_address_street AS "Property Address"
+  , d.deal_id as "Deal ID"
+  , CONCAT('https://www.redfin.com/tools/deals/',d.deal_id) as "Deal URL"
+  , to_char(d.redfin_gross_revenue, 'L999G999D99') AS "Referral fee"
+  , (CASE WHEN d.commission_check_status_id = 2 THEN 'Check Expected'
+      WHEN d.commission_check_status_id = 3 THEN 'Check Received'
+      WHEN d.commission_check_status_id = 4 THEN 'Check Deposited'
+      WHEN d.commission_check_status_id = 5 THEN 'Check Not Expected'
+      WHEN d.commission_check_status_id = 6 THEN 'Sent to Collections'
+      WHEN d.commission_check_status_id = 7 THEN 'Check Postponed'
+      END) AS "Check Status"
+  , to_char(d.commission_check_amount_received, 'L999G999D99') as "Amount Received"
+  , CONCAT(p.first_name,' ',p.last_name) AS "Agent Name"
+	, TO_CHAR(d.close_date, 'MM-DD-YYYY') AS "Close Date"
+
+FROM deals AS d 
+	JOIN agents AS a ON a.agent_id = d.agent_id
+	JOIN persons AS p ON a.person_id = p.participant_id
+	JOIN brokerages AS b ON a.brokerage_id = b.brokerage_id
+	JOIN business_markets as bm ON bm.business_market_id = d.business_market_id
+WHERE d.deal_classification_id = 2	
+	AND d.deal_status_id IN (1,8)
+	AND d.is_redfin_deal = 'true'
+	AND d.commission_check_resolution_status_id = 4
+
