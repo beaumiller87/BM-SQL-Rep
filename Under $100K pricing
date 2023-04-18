@@ -1,0 +1,33 @@
+SELECT DISTINCT ON (d.deal_id)
+	d.deal_id as "Deal ID"
+	, CONCAT('https://www.redfin.com/tools/deals/',d.deal_id) as "Deal URL"
+	, CONCAT(p.first_name,' ',p.last_name) AS "Agent Name"
+	, b.brokerage_name as "Brokerage"
+	, TO_CHAR(d.close_date, 'MM-DD-YYYY') AS "Close Date"
+	, to_char(d.close_price, 'L999G999G999D99') as "Final Price"
+	, to_char(li.sale_price, 'L999G999G999D99') as "MLS Sold Price"
+	, d.property_address_street AS "Property Address"
+	, d.property_address_city AS "City"
+	, d.property_address_state_code AS "State"
+	, d.property_address_zip AS "Zip Code"
+	, d.redfin_gross_revenue AS "Referral fee"
+FROM deals AS d 
+	JOIN agents AS a ON a.agent_id = d.agent_id
+	JOIN persons AS p ON a.person_id = p.participant_id
+	JOIN brokerages AS b ON a.brokerage_id = b.brokerage_id
+	JOIN listings as li ON d.listing_id = li.listing_id
+WHERE d.deal_classification_id = 2	
+	AND d.deal_status_id IN (1,8)
+	AND d.is_redfin_deal = 'true'
+	AND d.redfin_gross_revenue IN (0.00)
+	AND d.close_date >= ('07-31-2020')
+	AND d.commission_check_status_id = 2
+  and exists (
+		select *
+		from referral_transactions rt
+		join customer_agent_relationships car on rt.relationship_id = car.relationship_id
+		join logins l on d.login_id = l.login_id
+		where l.person_id = car.customer_id
+			and car.agent_id = d.agent_id
+			and car.relationship_status in (1, 4)
+			and rt.transaction_type = 2)
